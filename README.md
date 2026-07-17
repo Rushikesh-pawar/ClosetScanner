@@ -1,105 +1,284 @@
-# Closet Scanner
+# ClosetScanner
 
-An iOS app that uses an iPhone's LiDAR scanner and camera (via Apple's RoomPlan
-framework) to scan a closet, calculate its dimensions, and render a version of
-the space with detected contents hidden.
+A native iOS application that uses Apple's **RoomPlan**, **ARKit**, and the iPhone's **LiDAR** sensor to scan a closet, reconstruct its structural geometry, estimate its dimensions, and display a clean visualization of the space with detected contents excluded.
 
-## Requirements
+This project was built as a rapid prototype to demonstrate room scanning, structural reconstruction, and measurement validation using Apple's spatial computing frameworks.
 
-- A Mac with Xcode 15+
-- An iPhone with a LiDAR scanner: iPhone 12 Pro / Pro Max or later **Pro**
-  models (standard, non-Pro iPhones do not have LiDAR and cannot run this app)
+---
+
+# Features
+
+- Scan closets using Apple's RoomPlan framework
+- Uses LiDAR and RGB camera for room reconstruction
+- Reconstructs only structural elements (walls, floor, ceiling, doors, openings)
+- Excludes detected furniture and stored objects from the rendered model
+- Estimates closet width, depth, and height
+- Interactive SceneKit visualization
+- Built-in measurement validation tool
+- Native SwiftUI application
+
+---
+
+# Requirements
+
+- macOS with **Xcode 15+**
+- iPhone with LiDAR
+  - iPhone 12 Pro / Pro Max
+  - iPhone 13 Pro / Pro Max
+  - iPhone 14 Pro / Pro Max
+  - iPhone 15 Pro / Pro Max
+  - iPhone 16 Pro / Pro Max
 - iOS 16+
-- Apple Developer account (free tier is sufficient for on-device testing)
+- Apple Developer Account (Free account is sufficient)
 
-## Setup
+> **Note:** RoomPlan does **not** run inside the iOS Simulator.
 
-1. Open `ClosetScanner.xcodeproj` in Xcode (or create a new App project named
-   `ClosetScanner` and drag these files in).
-2. Under **Signing & Capabilities**, select your Apple ID as the team.
-3. Add `NSCameraUsageDescription` to Info.plist (required for RoomPlan):
-   `"This app uses the camera and LiDAR sensor to scan your closet."`
-4. Build and run on a physical LiDAR-equipped iPhone (RoomPlan does not work
-   in the Simulator).
+---
 
-## Architecture
+# Setup
 
-- **RoomCaptureRepresentable.swift** — wraps Apple's built-in `RoomCaptureView`,
-  which provides the scanning UI, coaching overlay, and live progress feedback
-  out of the box. On completion, it hands back a `CapturedRoom` struct
-  containing detected walls, floors, doors, windows, openings, and objects.
-- **StructuralSceneBuilder.swift** — builds a SceneKit scene from only the
-  *structural* elements of the `CapturedRoom` (walls, floor, doors, windows,
-  openings). It deliberately never reads `room.objects` (the shelves, boxes,
-  and clothes RoomPlan detected) — that omission is the mechanism that
-  produces the "emptied" closet view. This is a geometric hide, not a
-  generative inpainting fill — worth stating plainly in the demo.
-- **ClosetDimensions.swift** — derives width/depth/height from the captured
-  wall geometry (clustering opposite-wall lengths for a rectangular closet)
-  and formats them to the nearest 1/16".
-- **AccuracyTestView.swift** — a logging tool for the validation methodology
-  below: enter a tape-measure ground truth and the app's scanned value per
-  trial, and it computes mean/max absolute error against the 1/16" target.
+1. Clone the repository
 
-## Accuracy & Validation Methodology
+```bash
+git clone https://github.com/Rushikesh-pawar/ClosetScanner.git
+```
 
-**Target:** 1/16" (0.0625").
+2. Open
 
-**Method:** For each test closet, we took N manual reference measurements
-with a tape measure / folding rule (wall widths, depth, height), then ran
-repeated RoomPlan scans of the same space and recorded the app's reported
-values for the same dimensions using the in-app Accuracy Test tab. Error is
-computed as `scanned − ground truth` per trial; we report mean absolute error
-and max absolute error across trials.
+```
+ClosetScanner.xcodeproj
+```
 
-**Result:** ## Accuracy Validation
+3. Under **Signing & Capabilities**
+
+Select your Apple ID Team.
+
+4. Add the following permission inside **Info.plist**
+
+```
+Privacy - Camera Usage Description
+
+"This app uses the camera and LiDAR sensor to scan closets."
+```
+
+5. Build and run on a physical LiDAR-enabled iPhone.
+
+---
+
+# Technical Stack
+
+- Swift
+- SwiftUI
+- RoomPlan
+- ARKit
+- SceneKit
+- LiDAR
+- CapturedRoom API
+
+---
+
+# System Architecture
+
+```
+              LiDAR + RGB Camera
+                      │
+                      ▼
+                   ARKit
+                      │
+                      ▼
+                Apple RoomPlan
+                      │
+                      ▼
+                 CapturedRoom
+                      │
+      ┌───────────────┴───────────────┐
+      │                               │
+Detected Objects              Structural Elements
+Ignored                  Walls • Floor • Ceiling
+                                     │
+                                     ▼
+                      StructuralSceneBuilder
+                                     │
+                                     ▼
+                               SceneKit View
+                                     │
+                                     ▼
+                         Dimension Estimation
+                                     │
+                                     ▼
+                         Accuracy Validation
+```
+
+---
+
+# Project Structure
+
+### RoomCaptureRepresentable.swift
+
+Wraps Apple's built-in `RoomCaptureView`.
+
+Responsibilities:
+
+- Launches RoomPlan scanning
+- Displays Apple's coaching interface
+- Receives the final `CapturedRoom`
+- Passes scan results into the application
+
+---
+
+### StructuralSceneBuilder.swift
+
+Generates the 3D SceneKit visualization.
+
+Instead of rendering every object detected by RoomPlan, the application reconstructs **only the structural geometry**:
+
+- Walls
+- Floor
+- Ceiling
+- Doors
+- Windows
+- Openings
+
+**Important**
+
+Objects are **not removed using generative AI or image inpainting**.
+
+RoomPlan already classifies structural surfaces separately from detected objects. This application simply reconstructs the structural geometry while intentionally excluding detected objects from the rendered SceneKit scene.
+
+---
+
+### ClosetDimensions.swift
+
+Estimates closet dimensions from the structural wall geometry contained inside `CapturedRoom`.
+
+Outputs
+
+- Width
+- Depth
+- Height
+
+Measurements are displayed rounded to the nearest **1/16 inch**.
+
+---
+
+### AccuracyTestView.swift
+
+Validation utility for comparing:
+
+- Manual tape measurements
+- RoomPlan measurements
+
+Computes:
+
+- Absolute Error
+- Percentage Error
+- Mean Absolute Error (MAE)
+- Maximum Error
+
+---
+
+# Accuracy Validation
 
 The prototype was validated by comparing the application's measured dimensions against manual tape measurements of a residential closet.
 
 | Dimension | App (in) | Tape (in) | Absolute Error |
-|-----------|---------:|----------:|---------------:|
-| Width     | 59.107   | 60.000    | 0.893 in |
-| Depth     | 27.496   | 27.000    | 0.496 in |
-| Height    | 101.606  | 101.200   | 0.406 in |
+|-----------|----------:|----------:|---------------:|
+| Width | 59.107 | 60.000 | 0.893 in |
+| Depth | 27.496 | 27.000 | 0.496 in |
+| Height | 101.606 | 101.200 | 0.406 in |
 
-### Results
+## Results
 
-- **Mean Absolute Error (MAE):** **0.60 in**
-- **Maximum Absolute Error:** **0.89 in** (Width)
+**Mean Absolute Error (MAE):**
 
-**Percentage Error**
+```
+0.60 inches
+```
 
-- Width: **1.49%**
-- Depth: **1.84%**
-- Height: **0.40%**
+**Maximum Absolute Error**
 
-The prototype demonstrates reliable structural reconstruction and dimension estimation using Apple's RoomPlan framework. The observed measurement error is primarily influenced by LiDAR sensor resolution, scan trajectory, wall and corner reconstruction, and RoomPlan's geometric simplification of the captured space.
+```
+0.89 inches
+```
 
-Future improvements include:
-- Repeated-scan averaging to reduce measurement variance
-- Confidence scoring for detected dimensions
-- Custom ARKit plane fitting for improved wall estimation
-- Calibration using reference objects
-- Additional validation across multiple room geometries and lighting conditions
+### Percentage Error
 
-**Known limitations:**
-- RoomPlan's underlying LiDAR/depth resolution is the accuracy ceiling — no
-  amount of app-layer post-processing changes the raw sensor data.
-- Closets are small and can be poorly lit, both of which are known
-  RoomPlan stress conditions.
-- The width/depth calculation assumes a simple rectangular closet; an
-  L-shaped or irregular closet would need per-wall reporting instead of a
-  single width x depth figure.
-- Accuracy could likely be tightened with: multi-scan averaging, a known
-  reference object in-frame for scale calibration, or supplementing with
-  manual corner-to-corner measurement as a fallback/cross-check — noted as
-  future work rather than implemented under this timeline.
+| Dimension | Error |
+|-----------|-------:|
+| Width | 1.49% |
+| Depth | 1.84% |
+| Height | 0.40% |
 
-## Demo Flow
+The prototype demonstrates reliable structural reconstruction and dimension estimation using Apple's RoomPlan framework.
 
-1. Open the app, tap **Start Scan**.
-2. Walk the closet slowly, keeping walls/floor/ceiling in frame until RoomPlan
-   marks the scan complete.
-3. Results screen shows the structure-only 3D view (rotatable) and computed
-   dimensions.
-4. Switch to the **Accuracy Test** tab to show logged validation trials.
+The observed measurement error is primarily influenced by:
+
+- LiDAR sensor resolution
+- Scan trajectory
+- Wall and corner reconstruction
+- RoomPlan's geometric simplification of captured spaces
+
+---
+
+# Current Limitations
+
+- Measurement accuracy depends on LiDAR sensor resolution and scan quality.
+- RoomPlan simplifies wall geometry during reconstruction.
+- Width and depth estimation currently assumes a rectangular closet layout.
+- Irregular or complex room geometries would require per-wall measurements instead of a single width × depth estimate.
+
+---
+
+# Future Improvements
+
+Potential future enhancements include:
+
+- Multi-scan averaging for increased measurement consistency
+- Raw ARKit SceneDepth fusion
+- Custom plane fitting for improved wall estimation
+- Confidence scoring for measurements
+- Reference-object based calibration
+- Manual corner adjustment
+- Validation across multiple room geometries and lighting conditions
+
+---
+
+# Live Demo Flow
+
+1. Launch the application.
+2. Tap **Start Scan**.
+3. Slowly walk around the closet while RoomPlan captures the environment.
+4. Complete the scan.
+5. Display the reconstructed structural model.
+6. Rotate and inspect the 3D visualization.
+7. Show calculated width, depth, and height.
+8. Open the Accuracy Validation screen.
+9. Compare measured values against manual tape measurements.
+
+---
+
+# Engineering Decisions
+
+Instead of attempting to remove objects using generative AI, the application focuses on accurate geometric reconstruction.
+
+RoomPlan already separates structural elements from detected objects, allowing the application to reconstruct an "empty" closet by rendering only the structural geometry. This deterministic approach is significantly more reliable for dimension estimation than attempting to hallucinate hidden wall surfaces.
+
+---
+
+# Repository
+
+GitHub
+
+https://github.com/Rushikesh-pawar/ClosetScanner
+
+---
+
+# Author
+
+**Rushikesh Pawar**
+
+Master of Science in Computer Science
+
+Northeastern University
+
+Boston, Massachusetts
