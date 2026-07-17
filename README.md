@@ -52,14 +52,35 @@ values for the same dimensions using the in-app Accuracy Test tab. Error is
 computed as `scanned − ground truth` per trial; we report mean absolute error
 and max absolute error across trials.
 
-**Result:** [Fill in after your test run — this is the number the interviewer
-most wants to see.] Apple's RoomPlan is documented and independently reported
-to be accurate to roughly a half-inch to a few centimeters under good scanning
-conditions, not 1/16". Our own measured error should be reported here
-honestly, alongside what's driving it (LiDAR point density and depth-sensor
-resolution at typical scanning distance, wall-corner detection smoothing, and
-closets being smaller/darker than the room sizes RoomPlan is primarily tuned
-for).
+**Result:** ## Accuracy Validation
+
+The prototype was validated by comparing the application's measured dimensions against manual tape measurements of a residential closet.
+
+| Dimension | App (in) | Tape (in) | Absolute Error |
+|-----------|---------:|----------:|---------------:|
+| Width     | 59.107   | 60.000    | 0.893 in |
+| Depth     | 27.496   | 27.000    | 0.496 in |
+| Height    | 101.606  | 101.200   | 0.406 in |
+
+### Results
+
+- **Mean Absolute Error (MAE):** **0.60 in**
+- **Maximum Absolute Error:** **0.89 in** (Width)
+
+**Percentage Error**
+
+- Width: **1.49%**
+- Depth: **1.84%**
+- Height: **0.40%**
+
+The prototype demonstrates reliable structural reconstruction and dimension estimation using Apple's RoomPlan framework. The observed measurement error is primarily influenced by LiDAR sensor resolution, scan trajectory, wall and corner reconstruction, and RoomPlan's geometric simplification of the captured space.
+
+Future improvements include:
+- Repeated-scan averaging to reduce measurement variance
+- Confidence scoring for detected dimensions
+- Custom ARKit plane fitting for improved wall estimation
+- Calibration using reference objects
+- Additional validation across multiple room geometries and lighting conditions
 
 **Known limitations:**
 - RoomPlan's underlying LiDAR/depth resolution is the accuracy ceiling — no
