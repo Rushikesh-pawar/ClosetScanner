@@ -28,6 +28,7 @@ This project was built as a rapid prototype to demonstrate room scanning, struct
   - iPhone 14 Pro / Pro Max
   - iPhone 15 Pro / Pro Max
   - iPhone 16 Pro / Pro Max
+  - iPhone 17 Pro / Pro Max
 - iOS 16+
 - Apple Developer Account (Free account is sufficient)
 
